@@ -1,7 +1,7 @@
 # gta6-01 — Competition Checks (makefun_competition_checks)
 
 Competition: gta6-01 "Make GTA 6" — $1,666, top 100 paid. Deadline 2026-11-24T15:00:00Z (22:00 WIB 24 Nov).
-Checked by parent 2026-11-18 17:51 WIB; recorded here by the setup agent.
+Checked by parent 2026-11-18 17:51 WIB; this file rewritten in-session by the recorded builder.
 
 ## 1. EXISTS live
 - CONFIRMED in the live list 2026-11-18 17:51 WIB: 5,408 submissions, deadline 2026-11-24T15:00:00Z, status open.
@@ -32,3 +32,15 @@ Checked by parent 2026-11-18 17:51 WIB; recorded here by the setup agent.
 - The setup agent's session began BEFORE any recording, so it must NOT write game files. The builder child writes them.
 - main.ts needs at least one authored line: the builder must edit main.ts (add a header comment naming the game) — the starter's main.ts alone has zero authored lines.
 - *.min.js files (three.module.min.js) are left out of the transcript count; copying them is fine.
+
+## 4. BUILDER NOTES (recorded build, 2026-11-18)
+- Repo: ~/workspace/makefun/new-2026-11-18/gta6-01/repo/ — all game files written fresh
+  in-session by the builder (index.html + 13 src modules + shots.json); main.ts got the
+  Sunset Bay header comment; DESIGN.md and CHECKS.md rewritten in-session.
+- Vendored three.js r187 is a split build: three.module.min.js re-exports from
+  ./three.core.min.js, which was missing from the repo. The core file was added from the
+  same r187 vendored copy used by the threejs-fps entries (module file byte-identical).
+- Verification: headless Chromium (/opt/meta-chromium/chrome) over CDP from a Node stdlib
+  script — console/network capture, gameplay input, 1280×720 JPEG screenshots.
+- Usage rows: builder writes them to ~/.makefun/muse-usage-gta6-01.jsonl before finishing
+  (from muse.db, filtered to the builder's own agent_id).

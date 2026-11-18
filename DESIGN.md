@@ -2,6 +2,8 @@
 
 An original open-world crime game in the spirit of GTA 6. Everything is our own: city, characters,
 vehicles, names, story, art, sound. NO Rockstar/GTA names, logos, characters, maps or assets.
+Built in-session by the recorded builder for make.fun competition gta6-01 ($1,666, top 100 paid,
+deadline 2026-11-24T15:00:00Z).
 
 ## Setting & story
 - **City:** Sunset Bay — a fictional sun-soaked coastal city (grid of avenues + streets, beachfront
@@ -56,7 +58,8 @@ vehicles, names, story, art, sound. NO Rockstar/GTA names, logos, characters, ma
 
 ## Tech & file layout (one clear job per file; names are what the judge's outline shows)
 - `game/index.html` — page, import map ("three" → ./vendor/three.module.min.js), HUD DOM, canvas.
-- `game/vendor/three.module.min.js` — vendored three.js (already in place, do NOT rewrite).
+- `game/vendor/three.module.min.js` + `game/vendor/three.core.min.js` — vendored three.js r187
+  (split build: the module re-exports from the core file; both are vendored, neither is authored).
 - `game/src/main.js` — bootstrap + game loop + state machine (title/play/pause/busted).
 - `game/src/city.js` — procedural city: roads, sidewalks, buildings, beach, port, props.
 - `game/src/player.js` — on-foot character, movement, camera.
@@ -71,11 +74,10 @@ vehicles, names, story, art, sound. NO Rockstar/GTA names, logos, characters, ma
 - `game/src/input.js` — keyboard + mouse input.
 - `game/src/shots.js` — screenshot staging: `?shot=cover|drive|chase|mission` sets up the world
   (player position, car, wanted level, police, mission) deterministically with a fixed seed so
-  each screenshot is a real render of the game's own code. Read the starter kit's
-  game/src/shots.js for the pattern (it plays the real rules forward from a fresh world).
-- `main.ts` — the starter's plumbing (already in place). EDIT it to add at least one authored
-  line (a header comment naming Sunset Bay) — the starter alone has zero authored lines and
-  the transcript gate requires ≥1 authored line in main.ts.
+  each screenshot is a real render of the game's own code. It plays the real rules forward from
+  a fresh world for a fixed number of steps with scripted input.
+- `main.ts` — the starter's plumbing, with an added header comment naming Sunset Bay (the
+  starter alone has zero authored lines; the transcript gate requires ≥1 authored line in main.ts).
 - `shots.json` — list the 4 screenshots with their `?shot=` queries.
 
 ## Screenshots (4, 1280×720 JPEG, each ≤256 KiB, first by name is the cover)
@@ -84,21 +86,25 @@ vehicles, names, story, art, sound. NO Rockstar/GTA names, logos, characters, ma
 3. `3-chase.jpg` (`?shot=chase`) — police chase: wanted stars (3), police cars behind, minimap + mission HUD.
 4. `4-mission.jpg` (`?shot=mission`) — mission in progress: objective beacon + marker, package pickup.
 
-## Verification (must all pass before you finish)
+## Verification (must all pass before finishing)
 - Serve game/ with `node serve.ts` (port 8080) and open in headless Chrome (CDP).
 - 0 console errors, 0 failed network requests. Game loads, reaches title, starts, plays.
 - Take the 4 screenshots via the `?shot=` URLs at 1280×720; confirm each ≤256 KiB.
-- Run `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts`, then the kit check:
-  `node cli/makefun.mjs check --kit . --repo <repo> --transcripts <bundle> --worktree`
+- Run `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts`, then the kit check.
   (Note: for this strict-transcripts competition the check's transcript input is the sealed
   recording, not a bundle — run the check after the recording is sealed, or use --worktree
   and confirm the game/dossier gates pass; the transcript gate is checked at submission.)
 - Keep game/ under 48 MiB and index.html under 1 MiB. No network requests anywhere.
 
-## Priorities (a complete, working game beats an ambitious broken one)
-1. City + on-foot + car driving + HUD/minimap working with 0 errors.
-2. Traffic + pedestrians + wanted/police working.
-3. 3 missions with story + combat + save + sound.
-4. Screenshots staged and polished.
-Cut scope (not quality) if time is short: reduce mission count to 2, reduce pedestrian count,
-simplify combat to punch-only. Never ship a broken build.
+## Build notes (written during the recorded build)
+- The vendored three.js is a split build: `three.module.min.js` re-exports from
+  `./three.core.min.js`. The repo initially shipped only the module file, so the core file
+  was added beside it from the same three.js r187 vendored copy used by the earlier
+  threejs-fps entries (byte-identical module file). `*.min.js` files are excluded from the
+  transcript count, so this is plumbing, not authored game code.
+- Headless verification uses the system Chromium at /opt/meta-chromium/chrome driven over
+  CDP from a Node stdlib script (global WebSocket, no extra packages): console + network
+  capture, clicks/keys via Input.dispatch*, screenshots via Page.captureScreenshot.
+- Priorities (a complete, working game beats an ambitious broken one): city + on-foot +
+  car driving + HUD/minimap first; traffic + pedestrians + wanted/police second; missions +
+  combat + save + sound third; screenshots staged and polished last.

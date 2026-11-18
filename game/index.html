@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUNSET BAY — Open-World Crime</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0f14;
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: #fff; }
+  #app { position: fixed; inset: 0; }
+  #game { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: absolute; inset: 0; pointer-events: none; display: none; }
+  #hud.on { display: block; }
+  .panel { background: rgba(12, 8, 16, 0.55); border: 1px solid rgba(255, 180, 120, 0.35);
+    border-radius: 10px; backdrop-filter: blur(3px); }
+  #starsBox { position: absolute; top: 14px; left: 14px; padding: 8px 12px; }
+  #stars { font-size: 26px; letter-spacing: 3px; color: #ffd34d; text-shadow: 0 0 8px rgba(255, 190, 60, 0.8); line-height: 1; }
+  #stars .off { color: rgba(255,255,255,0.25); text-shadow: none; }
+  #healthWrap { margin-top: 7px; width: 150px; height: 9px; background: rgba(255,255,255,0.18); border-radius: 5px; overflow: hidden; }
+  #healthFill { height: 100%; width: 100%; background: linear-gradient(90deg, #37d67a, #a5e34d); border-radius: 5px; }
+  #healthLabel { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.75); margin-top: 3px; }
+
+  #cashBox { position: absolute; top: 14px; right: 14px; padding: 8px 14px; text-align: right; }
+  #cash { font-size: 24px; font-weight: 800; color: #7dff9b; text-shadow: 0 0 10px rgba(60,255,120,0.5); }
+  #missionName { font-size: 12px; letter-spacing: 2px; color: #ffb35c; font-weight: 700; margin-top: 2px; }
+  #missionText { font-size: 13px; color: #fff; margin-top: 2px; max-width: 300px; }
+
+  #minimapWrap { position: absolute; left: 14px; bottom: 14px; padding: 6px; }
+  #minimap { display: block; width: 180px; height: 180px; border-radius: 6px; }
+  #mapLabel { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.7); text-align: center; margin-top: 4px; }
+
+  #prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+    padding: 8px 18px; font-size: 15px; font-weight: 600; display: none; white-space: nowrap; }
+  #prompt b { color: #ffd34d; }
+  #ammoBox { position: absolute; right: 14px; bottom: 14px; padding: 8px 14px; font-size: 15px; font-weight: 700; }
+  #ammoBox span { color: #ffd34d; }
+  #hint { position: absolute; right: 14px; bottom: 64px; font-size: 11px; color: rgba(255,255,255,0.65);
+    text-align: right; line-height: 1.6; text-shadow: 0 1px 2px #000; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: 0 0 4px #000; display: none; }
+  #toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%);
+    padding: 10px 22px; font-size: 17px; font-weight: 700; color: #ffe9a8; display: none;
+    border: 1px solid rgba(255, 210, 90, 0.6); background: rgba(30, 16, 4, 0.7); border-radius: 10px;
+    text-align: center; max-width: 80%; }
+  #speedo { position: absolute; right: 14px; bottom: 108px; padding: 6px 12px; font-size: 20px;
+    font-weight: 800; display: none; }
+  #speedo small { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 400; }
+
+  /* ---------- Overlays ---------- */
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(26,8,20,0.82), rgba(60,16,8,0.78)); z-index: 10; }
+  .overlay.hidden { display: none; }
+  .card { max-width: 620px; width: 92%; text-align: center; padding: 34px 30px 28px;
+    background: rgba(10, 6, 12, 0.72); border: 1px solid rgba(255, 170, 90, 0.45); border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .card h1 { font-size: 54px; letter-spacing: 6px; font-weight: 900;
+    background: linear-gradient(180deg, #ffe9a8, #ff7a3c); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; line-height: 1; }
+  .card h2 { font-size: 15px; letter-spacing: 5px; color: #ffb35c; font-weight: 600; margin-top: 6px; }
+  .card p { font-size: 15px; line-height: 1.65; color: rgba(255,255,255,0.88); margin: 16px 0; }
+  .card .story { font-style: italic; color: #ffd9a0; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; text-align: left;
+    font-size: 13px; color: rgba(255,255,255,0.85); margin: 14px auto 20px; max-width: 480px; }
+  .controls b { color: #ffd34d; display: inline-block; min-width: 86px; }
+  .btn { pointer-events: auto; cursor: pointer; border: none; border-radius: 10px; padding: 13px 34px;
+    font-size: 18px; font-weight: 800; letter-spacing: 2px; color: #2a1200;
+    background: linear-gradient(180deg, #ffd34d, #ff8a2a); box-shadow: 0 6px 18px rgba(255,140,40,0.45); }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.ghost { background: transparent; color: #ffd34d; border: 1px solid rgba(255, 211, 77, 0.6);
+    box-shadow: none; font-size: 15px; padding: 10px 24px; margin-left: 10px; }
+  .btnrow { margin-top: 8px; }
+  .fine { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 16px; line-height: 1.5; }
+  #bustedTitle { color: #ff5d5d; }
+  .big { font-size: 44px !important; letter-spacing: 4px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="starsBox" class="panel">
+      <div id="stars"></div>
+      <div id="healthWrap"><div id="healthFill"></div></div>
+      <div id="healthLabel">RIO &nbsp;•&nbsp; HEALTH</div>
+    </div>
+    <div id="cashBox" class="panel">
+      <div id="cash">$0</div>
+      <div id="missionName">SUNSET BAY</div>
+      <div id="missionText"></div>
+    </div>
+    <div id="minimapWrap" class="panel">
+      <canvas id="minimap" width="180" height="180"></canvas>
+      <div id="mapLabel">SUNSET BAY</div>
+    </div>
+    <div id="prompt" class="panel"></div>
+    <div id="ammoBox" class="panel">PISTOL <span id="ammo">12</span></div>
+    <div id="speedo" class="panel"><span id="speed">0</span> <small>MPH</small></div>
+    <div id="hint">WASD move / drive &nbsp;•&nbsp; E enter car &nbsp;•&nbsp; F punch<br>
+      Click shoot &nbsp;•&nbsp; Space jump / handbrake &nbsp;•&nbsp; M mute &nbsp;•&nbsp; Esc pause</div>
+    <div id="crosshair"></div>
+    <div id="toast"></div>
+  </div>
+
+  <div id="titleOverlay" class="overlay">
+    <div class="card">
+      <h1>SUNSET BAY</h1>
+      <h2>AN OPEN-WORLD CRIME STORY</h2>
+      <p class="story">Rio rolls into Sunset Bay with an empty wallet and a fast mouth.
+        Mara Voss, the fixer who runs this town's night shift, has jobs — if Rio can
+        stay one step ahead of the Bay PD.</p>
+      <p>Steal cars. Outrun the law. Run Mara's jobs from the port to the beachfront
+        clubs. Build a name, stack cash, and become a Sunset Bay legend.</p>
+      <div class="controls">
+        <div><b>W A S D</b> Move / Drive</div><div><b>Mouse</b> Look around</div>
+        <div><b>Shift</b> Run</div><div><b>Space</b> Jump / Handbrake</div>
+        <div><b>E</b> Enter / exit car</div><div><b>F</b> Punch</div>
+        <div><b>Left click</b> Shoot pistol</div><div><b>R</b> Restart mission</div>
+        <div><b>M</b> Mute sound</div><div><b>Esc</b> Pause</div>
+      </div>
+      <div class="btnrow">
+        <button id="btnStart" class="btn">START ENGINE</button>
+        <button id="btnContinue" class="btn ghost" style="display:none">CONTINUE</button>
+      </div>
+      <div class="fine">A fully original game. Sunset Bay, Rio, Mara Voss and every street,
+        car and story beat were created for this game — no real-world brands, maps or characters.</div>
+    </div>
+  </div>
+
+  <div id="pauseOverlay" class="overlay hidden">
+    <div class="card">
+      <h1 class="big">PAUSED</h1>
+      <p>Take a breath, Rio. The Bay isn't going anywhere.</p>
+      <div class="btnrow">
+        <button id="btnResume" class="btn">RESUME</button>
+        <button id="btnRestartMission" class="btn ghost">RESTART MISSION</button>
+      </div>
+      <div class="fine">Progress saves automatically after every job.</div>
+    </div>
+  </div>
+
+  <div id="bustedOverlay" class="overlay hidden">
+    <div class="card">
+      <h1 class="big" id="bustedTitle">BUSTED</h1>
+      <p id="bustedText">The Bay PD caught up with you.</p>
+      <div class="btnrow">
+        <button id="btnRetry" class="btn">BACK ON THE STREET</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="completeOverlay" class="overlay hidden">
+    <div class="card">
+      <h1 class="big">SUNSET BAY LEGEND</h1>
+      <p id="completeText">Every job done. Every cop lost. Mara's crew runs the Bay now — and Rio runs with them.</p>
+      <div class="btnrow">
+        <button id="btnFreeRoam" class="btn">KEEP CRUISING</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
