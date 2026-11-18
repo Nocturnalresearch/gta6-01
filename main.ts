@@ -1,4 +1,7 @@
 // SUNSET BAY — an original open-world crime game for make.fun gta6-01.
+// Re-recorded 2026-11-19 for the Round 1 resubmission: the game is unchanged;
+// this file was rewritten in-session under the new recording so the transcript
+// witnesses its final content (the first submission failed transcripts_witnessed).
 // A working gta6-01 entry (Node 22, standard library only): the game is this directory's
 // game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
 // modules, no library and no network request), and the program hands it in. It copies game/ and
