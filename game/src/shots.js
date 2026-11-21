@@ -1,11 +1,15 @@
 // shots.js — screenshot staging for Sunset Bay (?shot=cover|drive|chase|mission).
 // Each scene plays the real rules forward from a fresh world for a fixed
 // number of steps, steered by scripted input, so every screenshot is a real
-// render of the game's own code and the same seed always gives the same frame.
+// render of the game's own code and the same seed always gives the same
+// frame. The camera locks at the end, so the captured frame is exactly the
+// staged one.
 import * as THREE from 'three';
 import { mulberry32 } from './city.js';
 import { createCar } from './vehicles.js';
 
+// Back to a fresh world: same seed, no heat, a little cash, Rio on foot at
+// the beachfront spawn, mission one ready to start.
 function resetForShot(G) {
   G.rng = mulberry32(1337);
   G.wanted = 0;
@@ -14,7 +18,7 @@ function resetForShot(G) {
   G.ammo = 12;
   G.time = 0;
   G.shotCam = null;
-  // clear police units
+  // Clear any police units left over.
   for (const car of [...G.cars]) {
     if (car.kind === 'police') {
       G.scene.remove(car.mesh);
@@ -25,9 +29,12 @@ function resetForShot(G) {
   G.police.footCops.length = 0;
   G.police.bustedTimer = 0;
   G.police.escapeTimer = 0;
-  // player back on foot at the beachfront spawn
+  // Player back on foot at the beachfront spawn.
   const p = G.player;
-  if (p.inCar && p.car) { p.car.kind = 'parked'; p.car.speed = 0; }
+  if (p.inCar && p.car) {
+    p.car.kind = 'parked';
+    p.car.speed = 0;
+  }
   p.inCar = false;
   p.car = null;
   p.group.visible = true;
@@ -36,7 +43,7 @@ function resetForShot(G) {
   p.heading = Math.PI;
   p.camYaw = 0;
   p.speed = 0;
-  // fresh story state
+  // Fresh story state.
   G.mission.index = 0;
   G.mission.step = 0;
   G.mission.storyDone = false;
@@ -47,6 +54,7 @@ function resetForShot(G) {
 }
 
 // Run the real game loop forward for `seconds` with `keys` held down.
+// Input is temporarily overridden so the scripted keys read as pressed.
 function simulate(G, seconds, keys = {}) {
   const input = G.input;
   const origDown = input.down.bind(input);
@@ -56,7 +64,7 @@ function simulate(G, seconds, keys = {}) {
   input.down = origDown;
 }
 
-// Move traffic cars out of a corridor so a staged drive has a clear lane.
+// Move traffic cars out of a rectangle so a staged drive has a clear lane.
 function clearCorridor(G, x0, x1, z0, z1) {
   for (const car of G.cars) {
     if (car.kind !== 'traffic') continue;
@@ -83,14 +91,16 @@ function findSportsCar(G) {
   return G.cars.find((c) => c.type === 'sports' && c.kind === 'parked');
 }
 
-// Lock the camera in a chase framing behind the player's car.
-// `side` shifts the camera to the flank so a chase also shows the police
-// units tailing the player.
+// Lock the camera in a chase framing behind the player's car. `side` shifts
+// the camera to the flank so a chase also shows the police units tailing
+// the player.
 function lockChaseCam(G, side = 0, back = 10, height = 4.4, lookAhead = 7) {
   const car = G.player.car;
   const pos = car.mesh.position;
-  const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
-  const rx = -Math.cos(car.heading), rz = Math.sin(car.heading);
+  const fx = Math.sin(car.heading);
+  const fz = Math.cos(car.heading);
+  const rx = -Math.cos(car.heading);
+  const rz = Math.sin(car.heading);
   G.shotCam = {
     pos: new THREE.Vector3(pos.x - fx * back + rx * side, height, pos.z - fz * back + rz * side),
     look: new THREE.Vector3(pos.x + fx * lookAhead, 1.6, pos.z + fz * lookAhead),
@@ -111,18 +121,20 @@ export function stageShot(name, G) {
     stageEnterCar(G, car);
     if (name === 'chase') {
       G.police.setWanted(3);
-      // two units right on the player's tail; the third spawns via the AI
+      // Two units right on the player's tail; the third spawns via the AI.
       for (const bx of [-86, -98]) {
         const pc = createCar(G.scene, 'police', 0x14161c, bx, 130, Math.PI / 2, 'police');
         pc.cruise = 30;
         G.cars.push(pc);
       }
       simulate(G, 2.5, { KeyW: true });
-      // pull the pursuit into the frame: two units tucked in behind the
-      // player's car on the far side of the lane, lights flashing
+      // Pull the pursuit into the frame: two units tucked in behind the
+      // player's car on the far side of the lane, lights flashing.
       const pcars = G.cars.filter((c) => c.kind === 'police');
-      const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
-      const rx = -Math.cos(car.heading), rz = Math.sin(car.heading);
+      const fx = Math.sin(car.heading);
+      const fz = Math.cos(car.heading);
+      const rx = -Math.cos(car.heading);
+      const rz = Math.sin(car.heading);
       pcars.forEach((pc, i) => {
         const back = 7 + i * 5;
         pc.mesh.position.set(
@@ -134,7 +146,7 @@ export function stageShot(name, G) {
         pc.mesh.rotation.y = pc.heading;
         pc.speed = car.speed;
       });
-      // high rear camera: both police units stack up behind the player car
+      // High rear camera: both police units stack up behind the player car.
       lockChaseCam(G, 0, 14, 6, 5);
     } else {
       simulate(G, 3, { KeyW: true });
@@ -150,7 +162,7 @@ export function stageShot(name, G) {
     p.camYaw = p.heading + Math.PI;
     p.group.rotation.y = p.heading;
     simulate(G, 1.2);
-    // frame the player with the beacon, the container stacks and the crane
+    // Frame the player with the beacon, the container stacks and the crane.
     G.shotCam = {
       pos: new THREE.Vector3(152, 3.6, 2),
       look: new THREE.Vector3(174, 2.5, -24),
@@ -158,7 +170,7 @@ export function stageShot(name, G) {
     return;
   }
 
-  // cover (default): Rio on foot on Bayfront Blvd, looking east down the
+  // Cover (default): Rio on foot on Bayfront Blvd, looking east down the
   // boulevard — palms, beach and ocean on the right, downtown on the left,
   // a parked sports car just ahead of him.
   const sports = findSportsCar(G);

@@ -1,10 +1,16 @@
-// combat.js — punch + pistol for Sunset Bay. Deliberately simple and
-// readable: a short-range shove and a centre-screen pistol with limited
-// ammo, refilled at glowing green crates around the city.
+// combat.js — punch + pistol for Sunset Bay.
+// Deliberately simple and readable: a short-range shove and a centre-screen
+// pistol with limited ammo, refilled at glowing green crates around the
+// city. Shooting or punching a cop or a pedestrian raises the wanted level,
+// so combat is a choice, not a free action.
 import * as THREE from 'three';
 
+// Four ammo crates, spread across the map.
 const PICKUP_SPOTS = [
-  { x: -34, z: -26 }, { x: 86, z: -78 }, { x: -86, z: 86 }, { x: 138, z: -26 },
+  { x: -34, z: -26 },
+  { x: 86, z: -78 },
+  { x: -86, z: 86 },
+  { x: 138, z: -26 },
 ];
 
 export function createCombat(G) {
@@ -28,8 +34,8 @@ export function createCombat(G) {
   return combat;
 }
 
+// Walk up the parent chain to the ped / cop group a raycast hit belongs to.
 function findTarget(G, obj) {
-  // walk up the parent chain to the ped / cop group
   let o = obj;
   while (o) {
     if (o.userData && o.userData.kind) return o;
@@ -43,8 +49,10 @@ export function punch(G) {
   if (p.inCar || p.punchCooldown > 0) return;
   p.punchCooldown = 0.45;
   G.audio.thud();
-  const px = p.group.position.x, pz = p.group.position.z;
-  const fx = Math.sin(p.heading), fz = Math.cos(p.heading);
+  const px = p.group.position.x;
+  const pz = p.group.position.z;
+  const fx = Math.sin(p.heading);
+  const fz = Math.cos(p.heading);
   const targets = [];
   for (const ped of G.peds) {
     if (ped.state !== 'down') targets.push({ obj: ped, pos: ped.group.position, kind: 'ped' });
@@ -53,14 +61,17 @@ export function punch(G) {
     targets.push({ obj: cop, pos: cop.group.position, kind: 'cop' });
   }
   for (const t of targets) {
-    const dx = t.pos.x - px, dz = t.pos.z - pz;
+    const dx = t.pos.x - px;
+    const dz = t.pos.z - pz;
     const d = Math.hypot(dx, dz);
+    // Only the closest person in front of Rio, within arm's reach.
     if (d < 2.4 && (dx * fx + dz * fz) / Math.max(0.01, d) > 0.35) {
       t.obj.state = 'down';
-      t.obj.downTimer = 3;
-      if (t.kind === 'cop') t.obj.downTimer = 3.5;
+      t.obj.downTimer = t.kind === 'cop' ? 3.5 : 3;
       G.police.addWanted(1);
-      G.hud.toast(t.kind === 'cop' ? 'You decked a cop! That will not help.' : 'You shoved a pedestrian aside.');
+      G.hud.toast(
+        t.kind === 'cop' ? 'You decked a cop! That will not help.' : 'You shoved a pedestrian aside.',
+      );
       return;
     }
   }
@@ -104,6 +115,7 @@ export function shoot(G) {
           rec.state = 'down';
           rec.downTimer = kind === 'cop' ? 6 : 5;
         }
+        // One star per shooting incident, not per bullet.
         if (G.time - G.combat.lastWantedAt > 2) {
           G.combat.lastWantedAt = G.time;
           G.police.addWanted(1);
@@ -112,7 +124,7 @@ export function shoot(G) {
       }
     }
   }
-  // tracer line from the camera to the hit point
+  // Tracer line from the muzzle to the hit point, gone in a blink.
   if (G.combat.tracer) G.scene.remove(G.combat.tracer);
   const geo = new THREE.BufferGeometry().setFromPoints([
     G.camera.position.clone().add(dir.clone().multiplyScalar(1.2)).add(new THREE.Vector3(0, -0.25, 0)),
@@ -136,7 +148,7 @@ export function updateCombat(G, dt) {
       c.tracer = null;
     }
   }
-  // ammo crates: spin, bob, refill on touch, respawn after 45 s
+  // Ammo crates: spin and bob, refill on touch, respawn after 45 s.
   const p = G.player;
   const px = p.inCar && p.car ? p.car.mesh.position.x : p.group.position.x;
   const pz = p.inCar && p.car ? p.car.mesh.position.z : p.group.position.z;

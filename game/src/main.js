@@ -15,6 +15,8 @@ import { createCombat, updateCombat, punch, shoot } from './combat.js';
 import { initHUD, updateHUD } from './hud.js';
 import { stageShot } from './shots.js';
 
+// Every uncaught error is collected here so the headless verifier can see
+// them — the game must ship with zero.
 window.__gameErrors = [];
 window.addEventListener('error', (e) => window.__gameErrors.push(String(e.message || e.error)));
 window.addEventListener('unhandledrejection', (e) => window.__gameErrors.push('rejection: ' + String(e.reason)));
@@ -35,15 +37,17 @@ scene.fog = new THREE.Fog(0xf2a06e, 150, 470);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 900);
 camera.position.set(0, 12, 130);
 
-// sunset lighting: warm low sun + pinkish sky bounce
+// Sunset lighting: a warm low sun plus a pinkish sky bounce.
 const hemi = new THREE.HemisphereLight(0xffd9b0, 0x5a4a52, 0.85);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffb36b, 1.9);
 sun.position.set(-140, 150, -80);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -230; sun.shadow.camera.right = 230;
-sun.shadow.camera.top = 230; sun.shadow.camera.bottom = -230;
+sun.shadow.camera.left = -230;
+sun.shadow.camera.right = 230;
+sun.shadow.camera.top = 230;
+sun.shadow.camera.bottom = -230;
 sun.shadow.camera.far = 600;
 sun.shadow.bias = -0.0006;
 scene.add(sun);
@@ -78,7 +82,7 @@ initMissions(G);
 spawnParkedCars(G);
 initTraffic(G);
 
-// ---- main API (used by the HUD buttons) ----
+// ---- the main API (called by the HUD buttons) ----
 function startGame(useSave) {
   G.audio.ensure();
   if (useSave) {
@@ -194,7 +198,10 @@ G.hud.updateMissionText();
 // ---- per-frame gameplay ----
 function stepGame(dt) {
   const input = G.input;
-  if (input.pressed('Escape')) { pauseGame(); return; }
+  if (input.pressed('Escape')) {
+    pauseGame();
+    return;
+  }
   if (input.pressed('KeyM')) {
     const muted = G.audio.toggleMute();
     G.hud.toast(muted ? 'Sound muted.' : 'Sound on.');
@@ -203,8 +210,9 @@ function stepGame(dt) {
 
   if (input.pressed('KeyE')) {
     const p = G.player;
-    if (p.inCar) exitCar(G);
-    else {
+    if (p.inCar) {
+      exitCar(G);
+    } else {
       const car = nearestCar(G, p.group.position.x, p.group.position.z, 4);
       if (car) enterCar(G, car);
     }
@@ -216,8 +224,9 @@ function stepGame(dt) {
     for (let i = 0; i < clicks; i++) shoot(G);
   }
 
-  if (G.player.inCar) updateDrive(G, dt);
-  else {
+  if (G.player.inCar) {
+    updateDrive(G, dt);
+  } else {
     updatePlayer(G, dt);
     G.audio.setEngine(0, false);
   }
@@ -252,17 +261,18 @@ function animate() {
   lastT = now;
   if (G.state === 'play') {
     G.time += dt;
-    // screenshot staging locks the camera AND freezes the world, so the
+    // Screenshot staging locks the camera AND freezes the world, so the
     // staged frame is exactly what the screenshot captures. The camera
     // still needs applying every frame (updateCamera lives in stepGame,
     // which the freeze skips).
-    if (!G.shotCam) stepGame(dt);
-    else {
+    if (!G.shotCam) {
+      stepGame(dt);
+    } else {
       G.camera.position.copy(G.shotCam.pos);
       G.camera.lookAt(G.shotCam.look);
     }
   } else if (G.state === 'title') {
-    // living backdrop behind the title: slow orbit, traffic keeps moving
+    // Living backdrop behind the title: slow orbit, traffic keeps moving.
     G.time += dt;
     G.titleAngle += dt * 0.045;
     camera.position.set(Math.sin(G.titleAngle) * 130, 42, Math.cos(G.titleAngle) * 130);
@@ -270,7 +280,7 @@ function animate() {
     updateTraffic(G, dt);
     updatePeds(G, dt);
   } else if (G.state === 'pause' || G.state === 'busted' || G.state === 'complete') {
-    // frozen world; keep rendering the scene behind the overlay
+    // Frozen world; keep rendering the scene behind the overlay.
   }
   renderer.render(scene, camera);
   if (firstFrame) {

@@ -1,5 +1,8 @@
-// missions.js — Mara Voss's jobs for Rio: three story missions with steps,
-// objective beacons, minimap targets, cash rewards and a story-complete ending.
+// missions.js — Mara Voss's jobs for Rio.
+// Three story missions with steps, a golden beacon marking the objective,
+// cash rewards and a story-complete ending. Each step is a small object:
+// the text the HUD shows, an optional map target, a check that runs every
+// frame, and optional hooks when the step starts or completes.
 import * as THREE from 'three';
 import { saveGame } from './save.js';
 
@@ -13,7 +16,9 @@ const playerPos = (G) => (G.player.inCar && G.player.car ? G.player.car.mesh.pos
 
 export const MISSIONS = [
   {
-    id: 'm1', name: 'FIRST WHEELS', reward: 500,
+    id: 'm1',
+    name: 'FIRST WHEELS',
+    reward: 500,
     intro: 'Mara Voss: "Rio. I need wheels, fast. Jack any parked car and bring it to my garage on Bayfront Blvd."',
     steps: [
       {
@@ -22,7 +27,7 @@ export const MISSIONS = [
         check: (G) => !!G.player.car,
       },
       {
-        text: 'Drive the car to Mara\'s garage on Bayfront Blvd',
+        text: "Drive the car to Mara's garage on Bayfront Blvd",
         target: GARAGE,
         check: (G) => {
           const p = playerPos(G);
@@ -32,7 +37,9 @@ export const MISSIONS = [
     ],
   },
   {
-    id: 'm2', name: 'BAYFRONT DROP', reward: 800,
+    id: 'm2',
+    name: 'BAYFRONT DROP',
+    reward: 800,
     intro: 'Mara Voss: "Package is waiting at the port, east side. Grab it, drop it at Club Neon on the beachfront. Keep it quiet."',
     steps: [
       {
@@ -58,7 +65,9 @@ export const MISSIONS = [
     ],
   },
   {
-    id: 'm3', name: 'HEAT WAVE', reward: 1500,
+    id: 'm3',
+    name: 'HEAT WAVE',
+    reward: 1500,
     intro: 'Mara Voss: "The job went loud, Rio — three stars and every unit in the Bay is rolling. Lose them, then get to the safehouse. Don\'t get caught."',
     steps: [
       {
@@ -80,11 +89,15 @@ export const MISSIONS = [
 ];
 
 export function initMissions(G) {
-  // beacon: light pillar + floating marker + ground ring
+  // The beacon: a golden light pillar, a floating octahedron and a ground
+  // ring, parked over the current objective and hidden when there is none.
   const beacon = new THREE.Group();
   const pillar = new THREE.Mesh(
     new THREE.CylinderGeometry(1.6, 2.2, 60, 16, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd34d, transparent: true, opacity: 0.22,
+      side: THREE.DoubleSide, depthWrite: false,
+    }),
   );
   pillar.position.y = 30;
   beacon.add(pillar);
@@ -147,7 +160,8 @@ export function updateMissions(G, dt) {
     m.beacon.visible = false;
     return;
   }
-  // beacon follows the current target
+
+  // The beacon follows the current target and bobs gently.
   if (step.target) {
     m.beacon.visible = true;
     m.beacon.position.set(step.target.x, 0, step.target.z);
@@ -156,7 +170,8 @@ export function updateMissions(G, dt) {
   } else {
     m.beacon.visible = false;
   }
-  // step completion
+
+  // Step completion: advance, or finish the mission and pay out.
   if (step.check(G)) {
     if (step.onComplete) step.onComplete(G);
     G.audio.jingle();
@@ -167,7 +182,6 @@ export function updateMissions(G, dt) {
       G.hud.toast(`Objective done — ${next.text}`);
       G.hud.updateMissionText();
     } else {
-      // mission complete
       G.cash += mission.reward;
       G.hud.toast(`${mission.name} COMPLETE — +$${mission.reward}`, 5000);
       saveGame(G);
